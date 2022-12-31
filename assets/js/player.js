@@ -17,7 +17,7 @@ window.addEventListener('message', async e => {
     const fnLangs = { 'ptBR': 'FINAL', 'enUS': 'FINAL', 'enGB': 'FINAL', 'esLA': 'FINAL', 'esES': 'FINAL', 'ptPT': 'FINAL', 'frFR': 'FINALE', 'deDE': 'FINALE', 'arME': 'نهائي', 'itIT': 'FINALE', 'ruRU': 'ФИНАЛЬНЫЙ' };
 
     let is_beta = e.data.beta;
-    let force_mp4 = false;
+    let force_mp4 = e.data.force_mp4;
     let tampermonkey = e.data.tampermonkey;
     let webvideocaster = e.data.webvideocaster;
     let tampermonkey_proxy = 'https://crp-proxy.herokuapp.com/get?url=';
@@ -26,8 +26,8 @@ window.addEventListener('message', async e => {
     let video_id = video_config_media['media_id'];
     let up_next_cooldown = e.data.up_next_cooldown;
     let up_next_enable = e.data.up_next_enable;
-    let up_next = e.data.up_next && !video_config_media['up_next'] ? false : e.data.up_next;
-    let thumbs = up_next ? video_config_media['up_next']['thumbnails'] : [];
+    let up_next = e.data.up_next;
+    let next_thumb = up_next ? e.data.up_next_thumbnail : [];
     let version = e.data.version;
     let user_lang = e.data.lang;
     let series = e.data.series;
@@ -39,6 +39,7 @@ window.addEventListener('message', async e => {
     let tracks = {};
     let dlSize = [];
     let dlUrl = [];
+    let media_data = e.data;
     for (let idx in r) {
         dlSize[idx] = document.getElementById(r[idx] + '_down_size');
         dlUrl[idx] = document.getElementById(r[idx] + '_down_url');
@@ -62,7 +63,7 @@ window.addEventListener('message', async e => {
         // Padrão
         if (stream.type == 'adaptive_hls') {
             video_stream_url = stream.url;
-            video_m3u8_array[streamLang] = force_mp4 ? mp4ListFromStream(video_stream_url) : m3u8ListFromStream(video_stream_url);
+            video_m3u8_array[streamLang] = force_mp4 ? mp4ListFromStream(video_stream_url) : video_stream_url;
             video_mp4_array[streamLang] = mp4ListFromStream(video_stream_url);
         }
         // Premium
@@ -90,17 +91,17 @@ window.addEventListener('message', async e => {
                     {
                         'title': getLocalEpisodeTitle(),
                         'description': '',
-                        'image': '',
+                        'image': media_data['thumbnail'],
                         'sources': tracks[sourceLocale] || tracks['off'],
                         'tracks': buildTracks(tracks)
                     },
                     up_next_enable && up_next
                         ? {
                               'autoplaytimer': 0,
-                              'title': '', //video_config_media['metadata']['up_next']['display_episode_number'] + ' - ' + video_config_media['metadata']['up_next']['series_title'],
+                              'title': media_data.up_next_title, //video_config_media['metadata']['up_next']['display_episode_number'] + ' - ' + video_config_media['metadata']['up_next']['series_title'],
                               'file': 'https://i.imgur.com/8wEeX0R.mp4',
                               'repeat': true,
-                              'image': thumbs[thumbs.length - 1].url
+                              'image': next_thumb
                           }
                         : {}
                 ],
@@ -265,36 +266,25 @@ window.addEventListener('message', async e => {
     /* ~~~~~~~~~~ FUNÇÕES ~~~~~~~~~~ */
     // MP4 (download) - Premium: Obtem o link direto pelo trailer
     function getDirectFile(url) {
-        return url;
-        // return url
-        //     .replace(/\/clipFrom.*?index.m3u8/, '')
-        //     .replace('_,', '_')
-        //     .replace(url.split('/')[2], 'fy.v.vrv.co');
+        return url
+            .replace(/\/clipFrom.*?index.m3u8/, '')
+            .replace('_,', '_')
+            .replace(url.split('/')[2], 'fy.v.vrv.co');
     }
 
     // MP4 (download) - Grátis: Obtem o link direto pelo padrão
     function mp4ListFromStream(url) {
-        // const cleanUrl = url.replace('evs1', 'evs').replace(url.split('/')[2], 'fy.v.vrv.co');
-        // const res = streamrgx
-        //     .exec(cleanUrl)
-        //     .slice(1)
-        //     .map(streamfile => streamfile && cleanUrl.replace(streamrgx, `_${streamfile}`))
-        //     .filter(el => el !== undefined);
+        const cleanUrl = url.replace('evs1', 'evs').replace(url.split('/')[2], 'fy.v.vrv.co');
+        const res = streamrgx
+            .exec(cleanUrl)
+            .slice(1)
+            .map(streamfile => streamfile && cleanUrl.replace(streamrgx, `_${streamfile}`))
+            .filter(el => el !== undefined);
 
-        // if (res.length === 3) {
-        //     const [el1, el2, ...tail] = res;
-        //     return [el2, el1, ...tail];
-        // }
-        return url;
-    }
-
-    // M3U8 (assistir) - Premium: Obtem o link direto pelo trailer
-    function getDirectStream(url, idx) {
-        // TODO: assistir premium pelo m3u8 (por enquanto usamos o mp4)
-    }
-
-    // M3U8 (assistir) - Grátis: Obtem o link direto pelo padrão
-    function m3u8ListFromStream(url) {
+        if (res.length === 3) {
+            const [el1, el2, ...tail] = res;
+            return [el2, el1, ...tail];
+        }
         return url;
     }
 
@@ -332,7 +322,7 @@ window.addEventListener('message', async e => {
         const final_translate = ` (${fnLangs[user_lang[0]] ? fnLangs[user_lang[0]] : 'FINAL'})`;
 
         if (series) {
-            return series + ' - '; //+ episode_translate + video_config_media['metadata']['display_episode_number'];
+            return series + ' - ' + media_data.episode; //+ episode_translate + video_config_media['metadata']['display_episode_number'];
         } else if (video_config_media['metadata']['up_next']) {
             let prox_ep_number = video_config_media['metadata']['up_next']['display_episode_number'];
             return video_config_media['metadata']['up_next']['series_title'] + ' - ' + prox_ep_number.replace(/\d+|OVA/g, '') + video_config_media['metadata']['display_episode_number'];

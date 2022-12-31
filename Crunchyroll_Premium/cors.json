@@ -23,7 +23,7 @@
             ]
         },
         "condition": {
-            "regexFilter": "^https?://(mateus7g\\.github\\.io|(?:ll|fy)\\.v\\.vrv\\.co|pl\\.crunchyroll\\.com|www\\.crunchyroll\\.com|localhost:5500|api\\.kamyroll\\.tech|dev4mod\\.github\\.io)/",
+            "regexFilter": "^https?://(mateus7g\\.github\\.io|(?:ll|fy)\\.v\\.vrv\\.co|.*\\.crunchyroll\\.com|api\\.kamyroll\\.tech|dev4mod\\.github\\.io)/",
             "resourceTypes": ["main_frame", "sub_frame", "stylesheet", "script", "image", "object", "xmlhttprequest", "other"]
         }
     },

@@ -33,47 +33,11 @@ function remove(element, name, untilRemoved = false, callback = () => {}) {
     }
 }
 
-//function que mudar o player para um mais simples.
-function importPlayer() {
-    var HTML = document.documentElement.innerHTML;
-    console.log('[CR Old] Removendo player da Crunchyroll...');
-    var elem = document.getElementById('showmedia_video_player');
-    elem.parentNode.removeChild(elem);
-
-    console.log('[CR Old] Pegando dados da stream...');
-    var video_config_media = JSON.parse(pegaString(HTML, 'vilos.config.media = ', ';'));
-
-    //Remove Nota do topo sobre experimentar o premium
-    //Remove avisos q o video nn pode ser visto
-    //Remove sugestão de inscrever-se para o trial gratuito
-    remove('.freetrial-note', 'Free Trial Note');
-    remove('.showmedia-trailer-notice', 'Trailer Notice');
-    remove('#showmedia_free_trial_signup', 'Free Trial Signup');
-
-    // Simular interação do usuário para deixar em fullscreen automaticamente
-    // var element = document.getElementById("template_scroller");
-    // if (element) element.click();
-
-    const appendTo = query('#showmedia_video_box') || query('#showmedia_video_box_wide');
-    const series = document.querySelector('meta[property="og:title"]');
-    const up_next = document.querySelector('link[rel=next]');
-
-    var message = {
-        'video_config_media': [JSON.stringify(video_config_media)],
-        'lang': [pegaString(HTML, 'LOCALE = "', '",')],
-        'series': series ? series.content : undefined,
-        'up_next': up_next ? up_next.href : undefined
-    };
-
-    console.log('[CR Old] Adicionando o jwplayer...');
-    addPlayer(appendTo, message);
-}
-
-//renderiza player na versão beta
-function importBetaPlayer(ready = false) {
+//renderiza player
+function importPlayer(ready = false) {
     var videoPlayer = query('.video-player') || query('#frame');
     if (!ready) {
-        setTimeout(() => importBetaPlayer(!!videoPlayer), 100);
+        setTimeout(() => importPlayer(!!videoPlayer), 100);
         return;
     }
     var lastWatchedPlayer = query('#frame');
@@ -82,26 +46,29 @@ function importBetaPlayer(ready = false) {
     var titleLink = query('.show-title-link');
     if (titleLink) titleLink.style.zIndex = '2';
 
-    console.log('[CR Beta] Removendo player da Crunchyroll...');
+    console.log('[CR] Removendo player da Crunchyroll...');
     remove('.video-player-placeholder', 'Video Placeholder');
     remove('.video-player', 'Video Player', true);
     remove('.blocked-stream-overlay', 'Blocked Overlay', true);
     videoPlayer.src = '';
     const appendTo = videoPlayer.parentNode;
 
-    console.log('[CR Beta] Pegando dados da stream...');
+    console.log('[CR] Pegando dados da stream...');
     var external_lang = preservedState.localization.locale.toLowerCase();
     var ep_lang = preservedState.localization.locale.replace('-', '');
     var ep_id = preservedState.watch.id;
     var ep = preservedState.content.media.byId[ep_id];
+
     if (!ep) {
         window.location.reload();
         return;
     }
-    var series_slug = ep.parentSlug;
-    //   var external_id = getExternalId(ep.id).substr(4);
-    //    var old_url = `https://www.crunchyroll.com/${external_lang}/${series_slug}/episode-${external_id}`;
+
+    var episode = document.querySelector('.erc-current-media-info > h1')?.textContent;
     var up_next = document.querySelector('[data-t="next-episode"] > a');
+    var up_next_title = document.querySelector('[data-t="next-episode"] h4')?.textContent;
+    var up_next_thumbnail = document.querySelector('[data-t="next-episode"] img')?.src;
+    var thumbnail = document.querySelector('.video-player-wrapper picture > img')?.src;
     var playback = ep.playback;
     var series = document.querySelector('.show-title-link > h4')?.innerText;
 
@@ -110,11 +77,14 @@ function importBetaPlayer(ready = false) {
         'id': ep_id,
         'lang': ep_lang,
         'up_next': up_next ? up_next.href : undefined,
-        'series': series ? series : undefined
+        'series': series ? series : undefined,
+        'episode': episode ? episode : undefined,
+        'thumbnail': thumbnail ? thumbnail : undefined,
+        'up_next_thumbnail': up_next_thumbnail ? up_next_thumbnail : undefined,
+        'up_next_title': up_next_title ? up_next_title : undefined
     };
 
     console.log('[CR Beta] Adicionando o jwplayer...');
-    //console.log('[CR Beta] Antiga URL:', old_url);
     addPlayer(appendTo, message, true);
 }
 
@@ -123,6 +93,7 @@ function addPlayer(element, playerInfo, beta = false) {
     var ifrm = document.createElement('iframe');
     ifrm.setAttribute('id', 'frame');
     ifrm.setAttribute('src', 'https://dev4mod.github.io/crp-iframe-player/');
+    //ifrm.setAttribute('src', 'http://localhost:5500/');
     ifrm.setAttribute('width', '100%');
     ifrm.setAttribute('height', '100%');
     ifrm.setAttribute('frameborder', '0');
@@ -140,36 +111,45 @@ function addPlayer(element, playerInfo, beta = false) {
             playerInfo['up_next_cooldown'] = items.cooldown === undefined ? 5 : items.cooldown;
             playerInfo['up_next_enable'] = items.aseguir === undefined ? true : items.aseguir;
             playerInfo['force_mp4'] = items.forcemp4 === undefined ? false : items.forcemp4;
-            playerInfo['version'] = '1.3.0';
+            playerInfo['version'] = '1.4.0';
             playerInfo['noproxy'] = true;
-            playerInfo['beta'] = beta;
             ifrm.contentWindow.postMessage(playerInfo, '*');
         };
     });
 }
 
 async function getData(video_id) {
+    let localExpires = localStorage.getItem('expires');
     let USER_AGENT = 'Kamyroll/4.1.0 Android/7.1.2 okhttp/4.9.2';
-    let data = {
-        'device_id': 'whatvalueshouldbeforweb',
-        'device_type': 'com.service.data',
-        'access_token': 'HMbQeThWmZq4t7w'
-    };
-    let response = await fetchCors('https://api.kamyroll.tech/auth/v1/token', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    });
-    let token = JSON.parse(response)['access_token'];
-    console.log(token);
 
-    let response_media = await fetchCors('https://api.kamyroll.tech/videos/v1/streams?channel_id=crunchyroll&id=' + video_id + '&locale=pt-BR', {
+    if (localExpires == null || localExpires < Date.now()) {
+        console.log('[CR Premium] Token expirado, gerando novo token...');
+        let data = {
+            'device_id': 'whatvalueshouldbeforweb',
+            'device_type': 'com.service.data',
+            'access_token': 'HMbQeThWmZq4t7w'
+        };
+        let response = await fetchByPass('https://api.kamyroll.tech/auth/v1/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'accept': '*/*',
+                'user-agent': USER_AGENT
+            },
+            body: JSON.stringify(data)
+        });
+        let token = JSON.parse(response)['access_token'];
+        let expires = parseInt(JSON.parse(response)['expires_in']);
+        localStorage.setItem('token', token);
+        localStorage.setItem('expires', Date.now() + expires);
+    }
+    let localToken = localStorage.getItem('token');
+
+    let response_media = await fetchByPass('https://api.kamyroll.tech/videos/v1/streams?channel_id=crunchyroll&id=' + video_id + '&locale=pt-BR', {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token.replace(/\s/g, ''),
+            'Authorization': 'Bearer ' + localToken,
             'accept': '*/*',
             'user-agent': USER_AGENT
         }
@@ -178,7 +158,7 @@ async function getData(video_id) {
     return response_media;
 }
 
-function fetchCors(url, options) {
+function fetchByPass(url, options) {
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ url, options }, response => {
             if (response.error) {
@@ -192,11 +172,8 @@ function fetchCors(url, options) {
 
 //function ao carregar pagina.
 function onloadfunction() {
-    var HTML = document.documentElement.innerHTML;
-    if (pegaString(HTML, 'vilos.config.media = ', ';') != null) {
-        importPlayer(); // old CR
-    } else if (preservedState != null) {
-        importBetaPlayer(); // beta CR
+    if (preservedState != null) {
+        importPlayer(); // beta CR
         remove('.erc-modal-portal > .overlay > .content-wrapper', 'Free Trial Modal', true, () => (document.body.classList = []));
         remove('.erc-watch-premium-upsell', 'Premium Sidebar', true);
         registerChangeEpisode();
@@ -215,7 +192,7 @@ function registerChangeEpisode() {
                 const HTML = await fetch(currentURL);
                 console.log('[CR Beta] Searching for new INITIAL_STATE');
                 preservedState = JSON.parse(pegaString(HTML, '__INITIAL_STATE__ = ', ';'));
-                importBetaPlayer(false);
+                importPlayer(false);
             }
         }
     }, 50);
@@ -231,31 +208,14 @@ document.onreadystatechange = function () {
 
     const crBetaStyle = document.createElement('style');
     crBetaStyle.innerHTML = `.video-player-wrapper {
-    margin-top: 2rem;
     margin-bottom: calc(-3vh - 7vw);
     height: 57.25vw !important;
-    max-height: 82vh !important;
+    margin-left: auto;
+    margin-right: auto;
+    width: 80% !important;
   }`;
     document.head.appendChild(crBetaStyle);
 };
-
-function fetch(url) {
-    return new Promise(async (resolve, reject) => {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.withCredentials = true;
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState == 4)
-                if (xhr.status == 200) resolve(xhr.responseText);
-                else reject(xhr.statusText);
-        };
-        xhr.send();
-    });
-}
-
-function getExternalId(id) {
-    return JSON.parse(localStorage.getItem('externalIds'))[id];
-}
 
 var s = document.createElement('script');
 s.src = chrome.runtime.getURL('interceptor.js');
