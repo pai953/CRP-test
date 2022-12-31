@@ -3,7 +3,7 @@ var preservedState = null;
 
 //function que pega algo dentro dentro do html.
 function pegaString(str, first_character, last_character) {
-    if (str.match(first_character + '(.*)' + last_character) == null) {
+    if (str == null || str.match(first_character + '(.*)' + last_character) == null) {
         return null;
     } else {
         new_str = str.match(first_character + '(.*)' + last_character)[1].trim();
@@ -198,11 +198,25 @@ function registerChangeEpisode() {
     }, 50);
 }
 
+function fetch(url) {
+    return new Promise(async (resolve, reject) => {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.withCredentials = true;
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState == 4)
+                if (xhr.status == 200) resolve(xhr.responseText);
+                else reject(xhr.statusText);
+        };
+        xhr.send();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', onloadfunction, false);
 document.onreadystatechange = function () {
     if (document.readyState === 'interactive') {
         console.log('[CR Beta] Searching for INITIAL_STATE');
-        const HTML = document.documentElement.innerHTML;
+        const HTML = '' + document.body.innerHTML;
         preservedState = JSON.parse(pegaString(HTML, '__INITIAL_STATE__ = ', ';'));
     }
 
@@ -216,6 +230,20 @@ document.onreadystatechange = function () {
   }`;
     document.head.appendChild(crBetaStyle);
 };
+
+function fetch(url) {
+    return new Promise(async (resolve, reject) => {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.withCredentials = true;
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState == 4)
+                if (xhr.status == 200) resolve(xhr.responseText);
+                else reject(xhr.statusText);
+        };
+        xhr.send();
+    });
+}
 
 var s = document.createElement('script');
 s.src = chrome.runtime.getURL('interceptor.js');
