@@ -52,7 +52,8 @@ window.addEventListener('message', async e => {
     const sourceLocale = getSourceLocale();
 
     for (let stream of streamlist) {
-        const streamLang = stream.hardsub_locale ? stream.hardsub_locale : 'off';
+        let streamLang = stream.hardsub_locale ? stream.hardsub_locale : 'off';
+        streamLang = streamLang.replace('-', '');
         if (!video_mp4_array[streamLang]) {
             stream_languages.push(streamLang);
             tracks[streamLang] = [];
@@ -425,7 +426,7 @@ window.addEventListener('message', async e => {
             const jwplayerLocale = Object.keys(lgLangs).find(el => lgLangs[el] === localStorage.getItem('jwplayer.captionLabel'));
             if (!jwplayerLocale) localStorage.setItem('jwplayer.captionLabel', lgLangs[user_lang]);
             const sourceLocale = jwplayerLocale ? jwplayerLocale : user_lang;
-            const hasUserLang = streamlist.find(stream => stream.hardsub_locale == sourceLocale);
+            const hasUserLang = streamlist.find(stream => stream.hardsub_locale.replace('-', '') == sourceLocale);
             return hasUserLang ? sourceLocale : 'off';
         } catch (err) {
             displayError(`Os cookies ${linkIssue('estão desativados', '51#issuecomment-1190684190')}!</code>`);
