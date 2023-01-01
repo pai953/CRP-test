@@ -54,7 +54,6 @@ function importPlayer(ready = false) {
     const appendTo = videoPlayer.parentNode;
 
     console.log('[CR] Pegando dados da stream...');
-    var external_lang = preservedState.localization.locale.toLowerCase();
     var ep_lang = preservedState.localization.locale.replace('-', '');
     var ep_id = preservedState.watch.id;
     var ep = preservedState.content.media.byId[ep_id];

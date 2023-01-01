@@ -425,7 +425,7 @@ window.addEventListener('message', async e => {
             const jwplayerLocale = Object.keys(lgLangs).find(el => lgLangs[el] === localStorage.getItem('jwplayer.captionLabel'));
             if (!jwplayerLocale) localStorage.setItem('jwplayer.captionLabel', lgLangs[user_lang]);
             const sourceLocale = jwplayerLocale ? jwplayerLocale : user_lang;
-            const hasUserLang = streamlist.find(stream => stream.hardsub_lang == sourceLocale);
+            const hasUserLang = streamlist.find(stream => stream.hardsub_locale == sourceLocale);
             return hasUserLang ? sourceLocale : 'off';
         } catch (err) {
             displayError(`Os cookies ${linkIssue('estão desativados', '51#issuecomment-1190684190')}!</code>`);
