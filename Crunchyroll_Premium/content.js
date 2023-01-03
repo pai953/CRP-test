@@ -67,7 +67,8 @@ function importPlayer(ready = false) {
     var up_next = document.querySelector('[data-t="next-episode"] > a');
     var up_next_title = document.querySelector('[data-t="next-episode"] h4')?.textContent;
     var up_next_thumbnail = document.querySelector('[data-t="next-episode"] img')?.src;
-    var thumbnail = document.querySelector('.video-player-wrapper picture > img')?.src;
+    //var thumbnail = document.querySelector('.video-player-wrapper picture > img')?.src;
+    var thumbnail = ep.images.thumbnail[0][7].source; //pegando a imagem do player
     var playback = ep.playback;
     var series = document.querySelector('.show-title-link > h4')?.innerText;
 
@@ -118,6 +119,31 @@ function addPlayer(element, playerInfo, beta = false) {
 }
 
 async function getData(video_id) {
+    let USER_AGENT = 'Kamyroll/4.1.0 Android/7.1.2 okhttp/4.9.2';
+    for (let i = 0; i < 2; i++) {
+        await getToken();
+        let localToken = localStorage.getItem('token');
+
+        let response_media = await fetchByPass('https://api.kamyroll.tech/videos/v1/streams?channel_id=crunchyroll&id=' + video_id + '&locale=pt-BR', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localToken,
+                'accept': '*/*',
+                'user-agent': USER_AGENT
+            }
+        });
+        if (response_media.includes('error')) {
+            localStorage.removeItem('expires');
+            continue;
+        }
+
+        return response_media;
+    }
+    console.log('[CR Premium] Erro ao pegar dados da stream...');
+}
+
+async function getToken() {
     let localExpires = localStorage.getItem('expires');
     let USER_AGENT = 'Kamyroll/4.1.0 Android/7.1.2 okhttp/4.9.2';
 
@@ -142,19 +168,6 @@ async function getData(video_id) {
         localStorage.setItem('token', token);
         localStorage.setItem('expires', Date.now() + expires);
     }
-    let localToken = localStorage.getItem('token');
-
-    let response_media = await fetchByPass('https://api.kamyroll.tech/videos/v1/streams?channel_id=crunchyroll&id=' + video_id + '&locale=pt-BR', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + localToken,
-            'accept': '*/*',
-            'user-agent': USER_AGENT
-        }
-    });
-
-    return response_media;
 }
 
 function fetchByPass(url, options) {
