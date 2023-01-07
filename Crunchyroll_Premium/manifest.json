@@ -6,30 +6,14 @@
     "icons": {
         "48": "icon.png"
     },
-    "action": {
+    "browser_action": {
         "default_title": "Crunchyroll iFrame Player",
         "default_popup": "popup.html",
         "default_icon": "icon.png"
     },
-    "permissions": ["storage", "declarativeNetRequest", "declarativeNetRequestFeedback"],
-    "web_accessible_resources": [
-        {
-            "resources": ["interceptor.js"],
-            "matches": ["<all_urls>"]
-        }
-    ],
-    "host_permissions": ["https://pl.crunchyroll.com/*", "https://www.crunchyroll.com/*", "https://*.mateus7g.github.io/*", "https://*.v.vrv.co/*", "http://localhost:5500/*", "https://*.kamyroll.tech/*"],
-    "declarative_net_request": {
-        "rule_resources": [
-            {
-                "id": "crpcors",
-                "enabled": true,
-                "path": "cors.json"
-            }
-        ]
-    },
+    "permissions": ["webRequest", "webRequestBlocking", "storage", "<all_urls>"],
     "background": {
-        "service_worker": "background.js"
+        "scripts": ["background.js"]
     },
     "content_scripts": [
         {
@@ -39,5 +23,6 @@
             "run_at": "document_start"
         }
     ],
-    "manifest_version": 3
+    "manifest_version": 2,
+    "web_accessible_resources": ["interceptor.js"]
 }

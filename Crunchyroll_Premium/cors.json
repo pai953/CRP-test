@@ -23,12 +23,35 @@
             ]
         },
         "condition": {
-            "regexFilter": "^https?://(mateus7g\\.github\\.io|(?:ll|fy)\\.v\\.vrv\\.co|.*\\.crunchyroll\\.com|api\\.kamyroll\\.tech|dev4mod\\.github\\.io)/",
+            "regexFilter": "^https?://(v\\.vrv\\.co|.*\\.crunchyroll\\.com|api\\.kamyroll\\.tech|dev4mod\\.github\\.io)/",
             "resourceTypes": ["main_frame", "sub_frame", "stylesheet", "script", "image", "object", "xmlhttprequest", "other"]
         }
     },
     {
         "id": 2,
+        "priority": 1,
+        "action": {
+            "type": "modifyHeaders",
+            "requestHeaders": [
+                {
+                    "header": "Origin",
+                    "operation": "set",
+                    "value": "https://www.crunchyroll.com"
+                },
+                {
+                    "header": "Referer",
+                    "operation": "set",
+                    "value": "https://www.crunchyroll.com"
+                }
+            ]
+        },
+        "condition": {
+            "initiatorDomains": ["https://v.vrv.co"],
+            "resourceTypes": ["xmlhttprequest"]
+        }
+    },
+    {
+        "id": 3,
         "priority": 1,
         "action": {
             "type": "modifyHeaders",

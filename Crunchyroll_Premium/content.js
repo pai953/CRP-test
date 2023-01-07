@@ -1,3 +1,10 @@
+var s = document.createElement('script');
+s.src = chrome.runtime.getURL('interceptor.js');
+s.onload = function () {
+    this.remove();
+};
+(document.head || document.documentElement).appendChild(s);
+
 const query = qry => document.body.querySelector(qry);
 var preservedState = null;
 
@@ -256,10 +263,3 @@ function fetch(url) {
         xhr.send();
     });
 }
-
-var s = document.createElement('script');
-s.src = chrome.runtime.getURL('interceptor.js');
-s.onload = function () {
-    this.remove();
-};
-(document.head || document.documentElement).appendChild(s);
