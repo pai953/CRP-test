@@ -49,6 +49,12 @@ window.addEventListener('message', async e => {
 
     // Obter streams
     const streamlist = video_config_media['streams'];
+
+    if (!streamlist || streamlist.length === 0) {
+        displayError(`Não foi possível obter os streams do vídeo.`);
+        return;
+    }
+
     const sourceLocale = getSourceLocale();
 
     for (let stream of streamlist) {

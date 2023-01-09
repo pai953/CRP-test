@@ -157,18 +157,21 @@ async function getToken() {
     if (localExpires == null || localExpires < Date.now()) {
         console.log('[CR Premium] Token expirado, gerando novo token...');
         let data = {
-            'device_id': 'whatvalueshouldbeforweb',
-            'device_type': 'com.service.data',
+            'device_id': 'iframeplayerdev',
+            'device_type': 'dev4m.iframe.player',
             'access_token': 'HMbQeThWmZq4t7w'
         };
-        let response = await fetchByPass('https://api.kamyroll.tech/auth/v1/token', {
-            method: 'POST',
+        let url = new URL('https://api.kamyroll.tech/auth/v1/token');
+        url.search = new URLSearchParams(data);
+
+        let response = await fetchByPass(url.toString(), {
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
                 'accept': '*/*',
                 'user-agent': USER_AGENT
             },
-            body: JSON.stringify(data)
+            params: data
         });
         let token = JSON.parse(response)['access_token'];
         let expires = parseInt(JSON.parse(response)['expires_in']);
