@@ -99,8 +99,8 @@ function addPlayer(element, playerInfo, beta = false) {
     console.log('[CR Premium] Adicionando o jwplayer...');
     var ifrm = document.createElement('iframe');
     ifrm.setAttribute('id', 'frame');
-    //ifrm.setAttribute('src', 'https://dev4mod.github.io/crp-iframe-player/');
-    ifrm.setAttribute('src', 'http://localhost:5500/');
+    ifrm.setAttribute('src', 'https://dev4mod.github.io/crp-iframe-player/');
+    //ifrm.setAttribute('src', 'http://localhost:5500/');
     ifrm.setAttribute('width', '100%');
     ifrm.setAttribute('height', '100%');
     ifrm.setAttribute('frameborder', '0');
