@@ -287,7 +287,7 @@ window.addEventListener('message', async e => {
             .map(streamfile => streamfile && cleanUrl.replace(streamrgx, `_${streamfile}`))
             .filter(el => el !== undefined);
 
-        if (res.length === 5) {
+        if (res.length === 3) {
             const [el1, el2, ...tail] = res;
             return [el2, el1, ...tail];
         }
