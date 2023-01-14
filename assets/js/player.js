@@ -22,7 +22,7 @@ window.addEventListener('message', async e => {
     let webvideocaster = e.data.webvideocaster;
     let tampermonkey_proxy = 'https://crp-proxy.herokuapp.com/get?url=';
     let streamrgx = /_,(\d+.mp4),(\d+.mp4),(\d+.mp4),(?:(\d+.mp4),(\d+.mp4),)?.*?m3u8/;
-    let video_config_media = await getConfigMedia(e.data.video_config_media, e.data.old_url);
+    let video_config_media = e.data.video_config_media;
     let video_id = video_config_media['media_id'];
     let up_next_cooldown = e.data.up_next_cooldown;
     let up_next_enable = e.data.up_next_enable;
@@ -217,13 +217,13 @@ window.addEventListener('message', async e => {
         playerInstance.addButton(...rewindBtn);
         if (webvideocaster) playerInstance.addButton(...webvideocasterBtn);
         else playerInstance.addButton(...downloadBtn);
-        if (!tampermonkey && version !== '1.3.0') playerInstance.addButton(...updateBtn);
+        if (!tampermonkey && version !== '1.4.0') playerInstance.addButton(...updateBtn);
 
         // Definir URL e Tamanho na lista de download
         for (let id of [1, 0, 2, 3, 4]) {
             const sourceLang = getSourceLocale();
             dlUrl[id].href = video_mp4_array[sourceLang][id];
-            dlUrl[id].download = ''; //video_config_media['metadata']['title'];
+            dlUrl[id].download = media_data.episode; //video_config_media['metadata']['title'];
         }
 
         // Funções para o player
@@ -288,7 +288,7 @@ window.addEventListener('message', async e => {
             .map(streamfile => streamfile && cleanUrl.replace(streamrgx, `_${streamfile}`))
             .filter(el => el !== undefined);
 
-        if (res.length === 3) {
+        if (res.length === 5) {
             const [el1, el2, ...tail] = res;
             return [el2, el1, ...tail];
         }
@@ -334,44 +334,6 @@ window.addEventListener('message', async e => {
             let prox_ep_number = video_config_media['metadata']['up_next']['display_episode_number'];
             return video_config_media['metadata']['up_next']['series_title'] + ' - ' + prox_ep_number.replace(/\d+|OVA/g, '') + video_config_media['metadata']['display_episode_number'];
         } else return episode_translate + video_config_media['metadata']['display_episode_number'] + final_translate;
-    }
-
-    function fetch(url) {
-        return new Promise(async (resolve, reject) => {
-            await $.ajax({
-                async: true,
-                type: 'GET',
-                url: tampermonkey ? tampermonkey_proxy + encodeURIComponent(url) : url,
-                responseType: 'json'
-            })
-                .then(res => {
-                    resolve(res.contents ?? res);
-                })
-                .catch(err => reject(err));
-        });
-    }
-
-    async function getConfigMedia(video_config_media, old_url) {
-        if (video_config_media) return JSON.parse(video_config_media);
-        else if (old_url) {
-            const localelessUrl = old_url.split('/').length == 6 ? old_url.replace(/\.com\/[^/]*?\//, '.com/') : old_url;
-            const normalizedUrl = localelessUrl.replaceAll('--', '-');
-            console.log('[CR Beta] URL universal:', normalizedUrl);
-            const media_content = await getVilosMedia(normalizedUrl + '?skip_wall=1');
-            return JSON.parse(media_content);
-        } else return {};
-    }
-
-    async function getVilosMedia(url) {
-        const htmlPage = await fetch(url);
-        if (!htmlPage) return '{}';
-
-        const startIndex = htmlPage.indexOf('config.media =');
-        const initialConfig = htmlPage.substr(startIndex + 15);
-
-        const endIndex = initialConfig.indexOf('\n\n');
-        const config = initialConfig.substr(0, endIndex - 1);
-        return config || '{}';
     }
 
     function toResolution(resolution) {

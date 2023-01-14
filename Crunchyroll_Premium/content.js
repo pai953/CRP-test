@@ -131,7 +131,7 @@ async function getData(video_id) {
         await getToken();
         let localToken = localStorage.getItem('token');
 
-        let response_media = await fetchByPass('https://api.kamyroll.tech/videos/v1/streams?channel_id=crunchyroll&id=' + video_id + '&locale=pt-BR', {
+        let response_media = await fetchByPass('https://api.kamyroll.tech/videos/v1/streams?channel_id=crunchyroll&id=' + video_id, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

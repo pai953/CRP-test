@@ -17,13 +17,6 @@ Você pode encontrar as últimas versões disponíveis abaixo:
 Atualmente a versão para Desktop está disponível [aqui](https://github.com/Dev4Mod/crp-iframe-player/releases/latest).  
 Para instalar veja o passo a passo [para pc](#%EF%B8%8F-como-instalar-desktop).
 
-<a href="https://github.com/Dev4Mod/crp-iframe-player/releases/latest" target="_blank"><img align="right" alt="Android" src="https://img.shields.io/badge/android-v1.4.0-violet?style=for-the-badge&logo=android"></a>
-
-#### Android (Kiwi)
-
-Versão mais recente para o Kiwi Browser está disponível [aqui](https://github.com/Dev4Mod/crp-iframe-player/releases/latest).  
-Para instalar veja o passo a passo [para android](#-como-instalar-android).
-
 ## 🖥️ Como instalar? (desktop)
 
 A extensão para Desktop funciona apenas em navegadores **baseados em Chromium**, como: Google Chrome, Opera, etc.  
@@ -48,47 +41,6 @@ Verifique se o seu browser está atualizado e prossiga:
 **6** ➜ Agora é só assistir 😉
 
 <br /><br /><br />
-
-## 📱 Como instalar? (android)
-
-A extensão para Android funciona apenas no Kiwi Browser.  
-Verifique se o seu navegador está atualizado e prossiga:
-
-<img align="right" width="350" height="233" alt="Kiwi Browser na Play Store" src="https://raw.githubusercontent.com/Dev4Mod/crp-iframe-player/master/Screenshots/instalacao-kiwi-1.png?raw=true&v=2">
-
-**1** ➜ Faça o [download](#download) do arquivo `Crunchyroll_Premium_Kiwi-Browser.zip`, não precisa extrair.
-
-**2** ➜ Baixe e abra o navegador Kiwi Browser, disponível na [Google Play Store](https://play.app.goo.gl/?link=https://play.google.com/store/apps/details?id=com.kiwibrowser.browser&ddl=1&pcampaignid=web_ddl_1):
-
-**3** ➜ Entre na aba de [extensões](https://raw.githubusercontent.com/Dev4Mod/crp-iframe-player/master/Screenshots/instalacao-kiwi-2.png?raw=true) do seu navegador (ou acesse diretamente [`chrome://extensions`](chrome://extensions))
-
-**4** ➜ Habilite o **Modo do desenvolvedor**, e então clique em **Load**
-
-![Habilitando modo programador e carregando a extensão](https://raw.githubusercontent.com/Dev4Mod/crp-iframe-player/master/Screenshots/instalacao-kiwi-3.png?raw=true)
-
-**5** ➜ Escolha o arquivo `.zip` baixado no começo do tutorial
-
-<img align="right" width="350" height="190" alt="Detalhes da extensão instalada" src="https://raw.githubusercontent.com/Dev4Mod/crp-iframe-player/master/Screenshots/instalacao-kiwi-4.png?raw=true">
-
-**6** ➜ Se você fez tudo certo, você deverá ver um card como este na sua tela.
-
-**7** ➜ Agora é só assistir 😉
-
-<br /><br /><br />
-
-## 🦊 Firefox
-
-Caso utilize um navegador baseado no Mozilla Firefox você também pode testar a versão adaptada pelo Rgern100 ([#38](https://github.com/Dev4Mod/crp-iframe-player/issues/38#issuecomment-1193372108)) aqui:  
-https://github.com/Rgern100/crp-iframe-player-Firefox
-
-## 🙉 Tampermonkey
-
-Caso esteja utilizando a versão do player deste repositório (Dev4Mod.github.io), utilizar o player pelo Tampermonkey (e não pela extensão) pode causar problemas com o CORS (e receber um [Código 232011](https://greasyfork.org/pt-BR/scripts/411391-crunchyroll-iframe-player/discussions/142287), veja [#50](https://github.com/Dev4Mod/crp-iframe-player/issues/50)).  
-Para resolver isso basta passar na função `ifrm.contentWindow.postMessage({ ... })` a chave `'tampermonkey'` com o valor `true`.
-
-UserScript 1 (pelo luiz-lp): https://github.com/luiz-lp/crpiframeplayer  
-UserScript 2 (pelo JarEdMaster): https://greasyfork.org/pt-BR/scripts/411391-crunchyroll-iframe-player  
-**Nota:** Não sou responsável por manter esses scripts
 
 **Mensagens que podem atualmente ser mandadas para o player via script:**
 
