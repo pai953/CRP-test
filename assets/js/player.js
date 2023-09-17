@@ -47,7 +47,7 @@ window.addEventListener('message', async e => {
     if (force_mp4) console.log('[CR Premium] Forçando MP4 (chromecast workaround)');
 
     // Obter streams
-    const streamlist = video_config_media['streams'];
+    const streamlist = getStreams(video_config_media['streams']);
 
     if (!streamlist || streamlist.length === 0) {
         displayError(`Não foi possível obter os streams do vídeo.`);
@@ -270,6 +270,17 @@ window.addEventListener('message', async e => {
     })();
 
     /* ~~~~~~~~~~ FUNÇÕES ~~~~~~~~~~ */
+    function getStreams(streams) {
+        var array_streams = [];
+        var adaptive_hls = streams.adaptive_hls;
+        Object.keys(adaptive_hls).forEach(lang => {
+            var stream = adaptive_hls[lang];
+            stream['type'] = 'adaptive_hls';
+            array_streams.push(stream);
+        });
+        return array_streams;
+    }
+
     // MP4 (download) - Premium: Obtem o link direto pelo trailer
     function getDirectFile(url) {
         return url

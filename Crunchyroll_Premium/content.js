@@ -42,6 +42,7 @@ function remove(element, name, untilRemoved = false, callback = () => {}) {
 
 //renderiza player
 function importPlayer(ready = false) {
+    console.log('[CR] Importando player...');
     var videoPlayer = query('.video-player') || query('#frame');
     if (!ready) {
         setTimeout(() => importPlayer(!!videoPlayer), 100);
@@ -61,22 +62,24 @@ function importPlayer(ready = false) {
     const appendTo = videoPlayer.parentNode;
 
     console.log('[CR] Pegando dados da stream...');
-    var ep_lang = preservedState.localization.locale.replace('-', '');
-    var ep_id = preservedState.watch.id;
-    var ep = preservedState.content.media.byId[ep_id];
+    // var ep_lang = preservedState.localization.locale.replace('-', '');
+    // var ep_id = preservedState.watch.id;
+    // var ep = preservedState.content.media.byId[ep_id];
+    var ep_lang = 'ptBR';
+    var ep_id = location.href.match(/watch\/(.*?)\//)[1];
 
-    if (!ep) {
-        window.location.reload();
-        return;
-    }
+    // if (!ep) {
+    //     window.location.reload();
+    //     return;
+    // }
 
     var episode = document.querySelector('.erc-current-media-info > h1')?.textContent;
     var up_next = document.querySelector('[data-t="next-episode"] > a');
     var up_next_title = document.querySelector('[data-t="next-episode"] h4')?.textContent;
     var up_next_thumbnail = document.querySelector('[data-t="next-episode"] img')?.src;
     //var thumbnail = document.querySelector('.video-player-wrapper picture > img')?.src;
-    var thumbnail = ep.images.thumbnail[0][7].source; //pegando a imagem do player
-    var playback = ep.playback;
+    var thumbnail = ''; //ep.images.thumbnail[0][7].source; //pegando a imagem do player
+    var playback = ''; //ep.playback;
     var series = document.querySelector('.show-title-link > h4')?.innerText;
 
     var message = {
@@ -100,7 +103,7 @@ function addPlayer(element, playerInfo, beta = false) {
     var ifrm = document.createElement('iframe');
     ifrm.setAttribute('id', 'frame');
     ifrm.setAttribute('src', 'https://dev4mod.github.io/crp-iframe-player/');
-    //ifrm.setAttribute('src', 'http://localhost:5500/');
+    // ifrm.setAttribute('src', 'http://localhost:5500/');
     ifrm.setAttribute('width', '100%');
     ifrm.setAttribute('height', '100%');
     ifrm.setAttribute('frameborder', '0');
@@ -131,50 +134,79 @@ async function getData(video_id) {
         console.log('[CR Premium] Pegando dados da stream...');
 
         let localToken = localStorage.getItem('token');
-
-        let response_media = await fetchByPass('https://api.kamyroll.tech/videos/v1/streams?channel_id=crunchyroll&id=' + video_id, {
+        let allTokens = JSON.parse(localToken);
+        let mediaId = await getMediaId(video_id, allTokens.token);
+        if (mediaId == null) continue;
+        let url = `https://beta-api.crunchyroll.com/cms/v2${allTokens.cms.bucket}/videos/${mediaId}/streams?Policy=${allTokens.cms.policy}&Signature=${allTokens.cms.signature}&Key-Pair-Id=${allTokens.cms.key_pair_id}`;
+        let response_media = await fetchByPass(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localToken,
-                'accept': '*/*'
+                'authorization': `${allTokens.token.token_type} ${allTokens.token.access_token}`
             }
         });
         if (response_media.includes('error')) {
-            localStorage.removeItem('expires');
+            localStorage.removeItem('token');
             continue;
         }
-
         return response_media;
     }
     console.log('[CR Premium] Erro ao pegar dados da stream...');
 }
 
+async function getMediaId(video_id, token) {
+    let resp = await fetchByPass(`https://beta-api.crunchyroll.com/content/v2/cms/objects/${video_id}?ratings=true&locale=pt-BR`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'authorization': `${token.token_type} ${token.access_token}`
+        }
+    });
+    if (resp.includes('error')) {
+        localStorage.removeItem('token');
+        return null;
+    }
+    let json = JSON.parse(resp);
+    return json.data[0].episode_metadata.versions[0].media_guid;
+}
+
 async function getToken() {
-    let localExpires = localStorage.getItem('expires');
-
-    if (localExpires == null || localExpires < Date.now()) {
+    let token = localStorage.getItem('token');
+    if (token == null || typeof token === 'undefined') {
         console.log('[CR Premium] Token expirado, gerando novo token...');
-        let data = {
-            'device_id': 'iframeplayerdev',
-            'device_type': 'dev4m.iframe.player',
-            'access_token': 'HMbQeThWmZq4t7w'
-        };
-        let url = new URL('https://api.kamyroll.tech/auth/v1/token');
-        url.search = new URLSearchParams(data);
-
-        let response = await fetchByPass(url.toString(), {
+        let tokenData = JSON.parse(await getRequest());
+        console.log(tokenData);
+        let newToken = await fetchByPass('https://beta-api.crunchyroll.com/index/v2', {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'accept': '*/*'
+                'authorization': `${tokenData.token_type} ${tokenData.access_token}`
             }
         });
-        let token = JSON.parse(response)['access_token'];
-        let expires = parseInt(JSON.parse(response)['expires_in']);
-        localStorage.setItem('token', token);
-        localStorage.setItem('expires', Date.now() + expires);
+        let allTokens = JSON.parse(newToken);
+        allTokens['token'] = tokenData;
+        localStorage.setItem('token', JSON.stringify(allTokens));
     }
+}
+
+async function getRequest() {
+    let refreshToken = await fetchByPass('https://raw.githubusercontent.com/Samfun75/File-host/main/aniyomi/refreshToken.txt');
+    refreshToken = refreshToken.replace(/[\n\r]/gi, '');
+    console.log(refreshToken);
+
+    const data = new URLSearchParams();
+    data.append('grant_type', 'refresh_token');
+    data.append('refresh_token', refreshToken);
+    data.append('scope', 'offline_access');
+
+    let resp = await fetchByPass('https://beta-api.crunchyroll.com/auth/v1/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic a3ZvcGlzdXZ6Yy0teG96Y21kMXk6R21JSTExenVPVnRnTjdlSWZrSlpibzVuLTRHTlZ0cU8='
+        },
+        body: data.toString()
+    });
+    return resp;
 }
 
 function fetchByPass(url, options) {
@@ -191,12 +223,10 @@ function fetchByPass(url, options) {
 
 //function ao carregar pagina.
 function onloadfunction() {
-    if (preservedState != null) {
-        importPlayer(); // beta CR
-        remove('.erc-modal-portal > .overlay > .content-wrapper', 'Free Trial Modal', true, () => (document.body.classList = []));
-        remove('.erc-watch-premium-upsell', 'Premium Sidebar', true);
-        registerChangeEpisode();
-    }
+    importPlayer(); // beta CR
+    remove('.erc-modal-portal > .overlay > .content-wrapper', 'Free Trial Modal', true, () => (document.body.classList = []));
+    remove('.erc-watch-premium-upsell', 'Premium Sidebar', true);
+    registerChangeEpisode();
 }
 
 // function pra atualizar pagina quando mudar de episodio pela UI beta
