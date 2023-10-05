@@ -42,7 +42,6 @@ function remove(element, name, untilRemoved = false, callback = () => {}) {
 
 //renderiza player
 function importPlayer(ready = false) {
-    console.log('[CR] Importando player...');
     var videoPlayer = query('.video-player') || query('#frame');
     if (!ready) {
         setTimeout(() => importPlayer(!!videoPlayer), 100);
@@ -58,6 +57,12 @@ function importPlayer(ready = false) {
     remove('.video-player-placeholder', 'Video Placeholder');
     remove('.video-player', 'Video Player', true);
     remove('.blocked-stream-overlay', 'Blocked Overlay', true);
+
+    console.log('[CR Premium] Removendo overlays...');
+    remove('.erc-modal-portal > .overlay > .content-wrapper', 'Free Trial Modal', true, () => (document.body.classList = []));
+    remove('.erc-watch-premium-upsell', 'Premium Sidebar', true);
+    remove('.erc-watch-premium-dub-upsell', 'New Premium Sidebar', true);
+
     videoPlayer.src = '';
     const appendTo = videoPlayer.parentNode;
 
@@ -65,13 +70,9 @@ function importPlayer(ready = false) {
     // var ep_lang = preservedState.localization.locale.replace('-', '');
     // var ep_id = preservedState.watch.id;
     // var ep = preservedState.content.media.byId[ep_id];
-    var ep_lang = 'ptBR';
+    var lang = location.href.match(/\/(.*?)\/watch/)[1].split('-');
+    var ep_lang = lang[0] + lang[1].toUpperCase();
     var ep_id = location.href.match(/watch\/(.*?)\//)[1];
-
-    // if (!ep) {
-    //     window.location.reload();
-    //     return;
-    // }
 
     var episode = document.querySelector('.erc-current-media-info > h1')?.textContent;
     var up_next = document.querySelector('[data-t="next-episode"] > a');
@@ -224,8 +225,6 @@ function fetchByPass(url, options) {
 //function ao carregar pagina.
 function onloadfunction() {
     importPlayer(); // beta CR
-    remove('.erc-modal-portal > .overlay > .content-wrapper', 'Free Trial Modal', true, () => (document.body.classList = []));
-    remove('.erc-watch-premium-upsell', 'Premium Sidebar', true);
     registerChangeEpisode();
 }
 
@@ -238,6 +237,7 @@ function registerChangeEpisode() {
             currentURL = window.location.href;
             if (currentURL.includes('/watch/')) {
                 remove('.erc-watch-premium-upsell', 'New Premium Sidebar', true);
+                remove('.erc-watch-premium-dub-upsell', 'New Premium Sidebar', true);
                 const HTML = await fetch(currentURL);
                 console.log('[CR Beta] Searching for new INITIAL_STATE');
                 preservedState = JSON.parse(pegaString(HTML, '__INITIAL_STATE__ = ', ';'));
