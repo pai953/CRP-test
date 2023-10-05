@@ -21,7 +21,15 @@ window.addEventListener('message', async e => {
     let tampermonkey = e.data.tampermonkey;
     let webvideocaster = e.data.webvideocaster;
     let streamrgx = /_,(\d+.mp4),(\d+.mp4),(\d+.mp4),(?:(\d+.mp4),(\d+.mp4),)?.*?m3u8/;
-    let video_config_media = JSON.parse(e.data.video_config_media);
+    let video_config_media = {}; // Initialize an empty object for video_config_media.
+
+    try {
+        // Parse the video_config_media JSON.
+        video_config_media = JSON.parse(e.data.video_config_media);
+    } catch (error) {
+        console.error('Error parsing JSON for video_config_media:', error);
+    }
+
     let video_id = video_config_media['media_id'];
     let up_next_cooldown = e.data.up_next_cooldown;
     let up_next_enable = e.data.up_next_enable;
@@ -218,213 +226,131 @@ window.addEventListener('message', async e => {
         else playerInstance.addButton(...downloadBtn);
         if (!tampermonkey && version !== '1.4.0') playerInstance.addButton(...updateBtn);
 
-        // Definir URL e Tamanho na lista de download
-        for (let id of [1, 0, 2, 3, 4]) {
-            const sourceLang = getSourceLocale();
-            dlUrl[id].href = video_mp4_array[sourceLang][id];
-            dlUrl[id].download = media_data.episode; //video_config_media['metadata']['title'];
-        }
+        jwplayer().on('visualQuality', () => {
+            // Selecionar qualidade de vídeo
+            const selectedQuality = jwplayer().getVisualQuality().level.label;
+            console.log('[CR Premium] Qualidade de vídeo selecionada:', selectedQuality);
 
-        // Funções para o player
-        jwplayer()
-            .on('ready', () => {
-                // Seta o tempo do video pro salvo no localStorage
-                if (localStorage.getItem(video_id) != null) {
-                    const t = localStorage.getItem(video_id);
-                    document.getElementsByTagName('video')[0].currentTime = t >= 5 ? t - 5 : t;
+            for (let idx in r) {
+                if (selectedQuality === toResolution(r[idx])) {
+                    dlSize[idx].innerHTML = dlSize[idx].getAttribute('s') + dlSize[idx].getAttribute('u') + dlSize[idx].getAttribute('p');
+                    dlUrl[idx].href = dlUrl[idx].getAttribute('u');
                 }
-                // Mantem fullscreen + autoplay caso tenha sido redirecionado usando a função "A seguir"/"Next up"
-                if (localStorage.getItem('next_up') === 'true') {
-                    localStorage.setItem('next_up', false);
-                    // jwplayer().setFullscreen(localStorage.getItem("next_up_fullscreen")); <- problemas com fullscreen automatico
-                    jwplayer().play();
-                }
-
-                document.body.querySelector('.loading_container').style.display = 'none';
-            })
-            .on('viewable', () => {
-                updateWebVideoCasterAnchor();
-                const old = document.querySelector('.jw-button-container > .jw-icon-rewind');
-                if (!old) return;
-                const btn = query => document.querySelector(`div[button="${query}"]`);
-                const btnContainer = old.parentElement;
-                if (btn(rewind_id)) {
-                    btnContainer.insertBefore(btn(rewind_id), old);
-                    btnContainer.insertBefore(btn(forward_id), old);
-                    btnContainer.removeChild(old);
-                }
-                if (is_beta && document.getElementById('player_div')) document.getElementById('player_div').classList.add('beta-layout');
-            })
-            .on('error', e => {
-                displayError(`Mais informações no Console.\n${linkIssue(`Código: ${e.code}`)}`);
-                console.error(e);
-            })
-            .on('audioTrackChanged', () => updateWebVideoCasterAnchor())
-            .on('levelsChanged', () => updateWebVideoCasterAnchor())
-            .on('visualQuality', () => updateWebVideoCasterAnchor());
-
-        // Salva o tempo do video a cada 7 segundos.
-        setInterval(() => {
-            if (jwplayer().getState() == 'playing') localStorage.setItem(video_id, jwplayer().getPosition());
-        }, 7000);
-    })();
-
-    /* ~~~~~~~~~~ FUNÇÕES ~~~~~~~~~~ */
-    function getStreams(streams) {
-        var array_streams = [];
-        var adaptive_hls = streams.adaptive_hls;
-        Object.keys(adaptive_hls).forEach(lang => {
-            var stream = adaptive_hls[lang];
-            stream['type'] = 'adaptive_hls';
-            array_streams.push(stream);
-        });
-        return array_streams;
-    }
-
-    // MP4 (download) - Premium: Obtem o link direto pelo trailer
-    function getDirectFile(url) {
-        return url
-            .replace(/\/clipFrom.*?index.m3u8/, '')
-            .replace('_,', '_')
-            .replace(url.split('/')[2], 'fy.v.vrv.co');
-    }
-
-    // MP4 (download) - Grátis: Obtem o link direto pelo padrão
-    function mp4ListFromStream(url) {
-        const cleanUrl = url.replace('evs1', 'evs').replace(url.split('/')[2], 'fy.v.vrv.co');
-        const res = streamrgx
-            .exec(cleanUrl)
-            .slice(1)
-            .map(streamfile => streamfile && cleanUrl.replace(streamrgx, `_${streamfile}`))
-            .filter(el => el !== undefined);
-
-        if (res.length === 3) {
-            const [el1, el2, ...tail] = res;
-            return [el2, el1, ...tail];
-        }
-        return url;
-    }
-
-    // Checa se o URL do video_mp4_array[lang][id] existe e calcula o tamanho p/ download
-    function linkDownload(id, tentativas = 0) {
-        const sourceLang = getSourceLocale();
-        console.log('  - Baixando (' + sourceLang + '): ', r[id]);
-        let video_mp4_url = video_mp4_array[sourceLang][id];
-        if (!video_mp4_url) return disableDownload(id);
-
-        let fileSize = '';
-        let http = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
-        http.onreadystatechange = () => {
-            if (http.readyState == 4 && http.status == 200) {
-                fileSize = http.getResponseHeader('content-length');
-                if (!fileSize) return setTimeout(() => linkDownload(id), 5000);
-                else {
-                    let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-                    if (fileSize == 0) return console.log('addSource#fileSize == 0');
-                    let i = parseInt(Math.floor(Math.log(fileSize) / Math.log(1024)));
-                    if (i == 0) return console.log('addSource#i == 0');
-                    let return_fileSize = (fileSize / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
-                    dlSize[id].innerText = return_fileSize;
-                    return console.log(`[CR Premium] Source adicionado: ${r[id]} (${return_fileSize})`);
-                }
-            } else if (http.readyState == 4 && tentativas < 3) return setTimeout(() => linkDownload(id, tentativas + 1), 5000);
-            else if (http.readyState == 4) return disableDownload(id);
-        };
-        http.open('HEAD', video_mp4_url, true);
-        http.send(null);
-    }
-
-    function getLocalEpisodeTitle() {
-        const episode_translate = `${epLangs[user_lang[0]] ? epLangs[user_lang[0]] : 'Episode'} `;
-        const final_translate = ` (${fnLangs[user_lang[0]] ? fnLangs[user_lang[0]] : 'FINAL'})`;
-
-        if (series) {
-            return series + ' - ' + media_data.episode; //+ episode_translate + video_config_media['metadata']['display_episode_number'];
-        } else if (video_config_media['metadata']['up_next']) {
-            let prox_ep_number = video_config_media['metadata']['up_next']['display_episode_number'];
-            return video_config_media['metadata']['up_next']['series_title'] + ' - ' + prox_ep_number.replace(/\d+|OVA/g, '') + video_config_media['metadata']['display_episode_number'];
-        } else return episode_translate + video_config_media['metadata']['display_episode_number'] + final_translate;
-    }
-
-    function toResolution(resolution) {
-        return parseInt(resolution) >= 720 ? `${resolution}p<sup><sup>HD</sup></sup>` : `${resolution}p`;
-    }
-
-    function disableDownload(id) {
-        dlUrl[id].style.pointerEvents = 'none';
-        dlUrl[id].style.cursor = 'default';
-        dlUrl[id].style.filter = 'invert(49%)';
-        dlSize[id].innerText = '🚫';
-    }
-
-    function buildTracks(tracks) {
-        return Object.entries(tracks)
-            .map(entry => {
-                const [lang, track] = entry;
-                console.log(entry);
-                return {
-                    'kind': 'captions',
-                    'file': track,
-                    'label': lgLangs[lang] || lang,
-                    'language': lang
-                };
-            })
-            .filter(track => track['language'] !== 'off');
-    }
-
-    function updateWebVideoCasterAnchor() {
-        const playerInstance = jwplayer();
-        const castBtn = document.querySelector('[button="webvideocaster-video-button"]');
-        if (!castBtn) return;
-        const locale = getSourceLocale();
-        let quality = playerInstance.getCurrentQuality() - 1;
-        quality = quality === 0 ? 1 : quality === 1 ? 0 : quality;
-        console.log(`[CR Premium] Definido o WVC na qualidade de ${r[quality]}p`);
-        let urlToCast = video_mp4_array[locale][quality];
-        if (!urlToCast) urlToCast = video_mp4_array[locale][1];
-        if (!urlToCast) urlToCast = video_mp4_array[locale][0];
-        urlToCast = 'wvc-x-callback://open?url=' + encodeURIComponent(urlToCast);
-
-        if (navigator.userAgent.includes('Android')) {
-            let anchor = document.getElementById('jw-webvideocaster');
-            if (!anchor) {
-                anchor = document.createElement('a');
-                anchor.id = 'jw-webvideocaster';
-                anchor.href = urlToCast;
-                castBtn.parentNode.insertBefore(anchor, castBtn);
-                anchor.appendChild(castBtn);
-            } else {
-                anchor.href = urlToCast;
             }
-        } else castBtn.onclick = () => (window.top.location = urlToCast);
-    }
+        });
 
-    function getSourceLocale() {
-        try {
-            const jwplayerLocale = Object.keys(lgLangs).find(el => lgLangs[el] === localStorage.getItem('jwplayer.captionLabel'));
-            if (!jwplayerLocale) localStorage.setItem('jwplayer.captionLabel', lgLangs[user_lang]);
-            const sourceLocale = jwplayerLocale ? jwplayerLocale : user_lang;
-            const hasUserLang = streamlist.find(stream => stream.hardsub_locale.replace('-', '') == sourceLocale);
-            return hasUserLang ? sourceLocale : 'off';
-        } catch (err) {
-            displayError(`Os cookies ${linkIssue('estão desativados', '51#issuecomment-1190684190')}!</code>`);
-            throw err;
+        jwplayer().on('play', () => {
+            updateWebVideoCasterAnchor();
+        });
+
+        jwplayer().on('ready', () => {
+            updateWebVideoCasterAnchor();
+        });
+
+        let download_window;
+        window.closeDownloadWindow = () => {
+            if (download_window) {
+                download_window.close();
+            }
+        };
+
+        // Abrir o link de download
+        const linkDownload = id => {
+            let jw = jwplayer();
+            let delay = 500;
+
+            jw.seek(0);
+            jw.play();
+
+            const t = jwplayer().getEnvironment().OS.mobile ? 1000 : 200;
+            setTimeout(() => {
+                jw.seek(jw.getPosition() + t);
+                setTimeout(() => {
+                    if (typeof download_window == 'undefined' || download_window.closed) {
+                        download_window = window.open(video_mp4_array[getSourceLocale()][id], 'Video Download');
+                    } else {
+                        download_window.location = video_mp4_array[getSourceLocale()][id];
+                    }
+                    download_window.focus();
+                    jw.pause(true);
+                }, delay);
+            }, t);
+        };
+
+        // Function to construct tracks array.
+        function buildTracks(tracks) {
+            const constructedTracks = [];
+            for (const [locale, track] of Object.entries(tracks)) {
+                constructedTracks.push({
+                    file: track,
+                    label: getLanguageName(locale),
+                    kind: 'captions'
+                });
+            }
+            return constructedTracks;
         }
-    }
 
-    function linkIssue(text, issue = '') {
-        return `<a href="https://github.com/Mateus7G/crp-iframe-player/issues/${issue}" target="_blank" style="color: rgb(244, 117, 33)">${text}</a>`;
-    }
+        // Function to get the language name from the locale.
+        function getLanguageName(locale) {
+            return lgLangs[locale] || 'Off';
+        }
 
-    function displayError(info) {
-        const msg = 'Erro ao carregar o vídeo! (>﹏<)\n' + info;
-        const loadingIcon = document.getElementById('player-loading');
-        const errorIcon = document.getElementById('player-error');
-        const loadingText = document.getElementById('loading-text');
-        const jwErrorText = document.querySelector('.jw-error-text');
-        loadingIcon.style = 'display: none;';
-        errorIcon.style = 'display: block;';
-        loadingText.innerHTML = msg.replaceAll('\n', '<span class="corta_linha"></span>');
-        if (jwErrorText) jwErrorText.innerHTML = msg.replaceAll('\n', '<span class="jw-break jw-reset"></span>');
-    }
+        // Function to get the full episode title with language.
+        function getLocalEpisodeTitle() {
+            const episodeTitle = video_config_media['metadata']['display_episode_number']
+                ? `${getLanguageName(sourceLocale)} - ${video_config_media['metadata']['display_episode_number']}`
+                : '';
+            return episodeTitle ? `${episodeTitle} - ${video_config_media['metadata']['title']}` : video_config_media['metadata']['title'];
+        }
+
+        // Function to convert resolution number to string.
+        function toResolution(res) {
+            return r[res] ? r[res] + 'p' : '';
+        }
+
+        // Function to determine the source locale for captions.
+        function getSourceLocale() {
+            return user_lang in video_config_media['metadata']['available_languages'] ? user_lang : 'enUS';
+        }
+
+        function getDirectFile(url) {
+            return url.match(streamrgx)[1];
+        }
+
+        function mp4ListFromStream(url) {
+            const matches = url.match(streamrgx);
+            if (matches) {
+                const mp4List = [matches[1], matches[2], matches[3]];
+                if (matches[4]) {
+                    mp4List.push(matches[4]);
+                }
+                if (matches[5]) {
+                    mp4List.push(matches[5]);
+                }
+                return mp4List;
+            }
+            return [];
+        }
+
+        // Function to display an error message on the player.
+        function displayError(errorMessage) {
+            const errorElement = document.createElement('div');
+            errorElement.textContent = errorMessage;
+            errorElement.style.color = 'red';
+            errorElement.style.fontSize = '18px';
+            errorElement.style.textAlign = 'center';
+            const playerContainer = document.getElementById('player_div');
+            playerContainer.innerHTML = '';
+            playerContainer.appendChild(errorElement);
+        }
+
+        // Function to update the WebVideoCaster anchor element.
+        function updateWebVideoCasterAnchor() {
+            const anchor = document.getElementById(webvideocaster_id);
+            if (anchor) {
+                anchor.href = `intent://${window.location.href}#Intent;package=com.instantbits.cast.webvideo;S.url=${window.location.href};end`;
+                anchor.style.display = 'block';
+            }
+        }
+    })();
 });
