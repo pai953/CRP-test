@@ -71,7 +71,13 @@ function importPlayer(ready = false) {
     // var ep_id = preservedState.watch.id;
     // var ep = preservedState.content.media.byId[ep_id];
     var lang = location.href.match(/\/(.*?)\/watch/)[1].split('-');
-    var ep_lang = lang[0] + lang[1].toUpperCase();
+    var ep_lang = "";
+if (lang && lang.length >= 2) {
+    ep_lang = lang[0] + lang[1].toUpperCase();
+} else {
+    // Handle the case where lang is not defined or doesn't have enough elements.
+    // You might want to provide a default value or an error message.
+}
     var ep_id = location.href.match(/watch\/(.*?)\//)[1];
 
     var episode = document.querySelector('.erc-current-media-info > h1')?.textContent;
@@ -163,14 +169,22 @@ async function getMediaId(video_id, token) {
             'authorization': `${token.token_type} ${token.access_token}`
         }
     });
+
     if (resp.includes('error')) {
         localStorage.removeItem('token');
         return null;
     }
     let json = JSON.parse(resp);
-    return json.data[0].episode_metadata.versions[0].media_guid;
-}
 
+    if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        let episodeMetadata = json.data[0].episode_metadata;
+        if (episodeMetadata && episodeMetadata.versions && episodeMetadata.versions.length > 0) {
+            return episodeMetadata.versions[0].media_guid;
+        }
+    }
+
+    return null; // Return null if any expected properties are missing
+}
 async function getToken() {
     let token = localStorage.getItem('token');
     if (token == null || typeof token === 'undefined') {
